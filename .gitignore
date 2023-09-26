@@ -1,2 +1,7 @@
-dist/
-.venv/
+/.coverage
+/dist
+/htmlcov
+/.mypy_cache
+/.pytest_cache
+/.venv
+__pycache__

@@ -10,16 +10,18 @@ Dynamically route [mod_wsgi][0] to [mod_vhost_alias][1].
 - Isolate virtual environments between vhosts
 - Automatically reload deployed vhosts
 - Automatically unload deleted vhosts
+- Symlinked vhost support
 
-## Requirements
+## Overview
 
-- Vhosts must be symlinks, which change on deploy.
-- Apps must perform all `import`s and `sys.path` dependent operations during setup.
+The router checks the HTTP_HOST on request to decide which vhosts it should be routed to.
+WSGI apps are lazy loaded. WSGI directories are monitored for mtime changes by default.
+Symlinks are resolved on access to support deploys that symlink vhosts.
 
 ## Concerns
 
-- Modules belonging to different vhosts are loaded into the same mod_wsgi process / thread by default.
-- Built-in modules loaded by `mod_wsgi` remain shared between all apps in a process / thread.
+- Modules belonging to different vhosts are loaded into the same mod_wsgi process by default.
+- Modules loaded outside of an app are shared between all apps in a process.
 
 ## Install
 
@@ -52,23 +54,19 @@ application = Router().application
 ```
 
 ```sh
-mkdir -p /var/www/.builds/example.domain.org/1/static
-mkdir -p /var/www/.builds/example.domain.org/1/wsgi
-python -m venv /var/www/.builds/example.domain.org/1/.venv
-/var/www/.builds/example.domain.org/1/.venv/bin/python -m pip install Flask
+mkdir -p /var/www/example.domain.org/static
+mkdir -p /var/www/example.domain.org/wsgi
+python -m venv /var/www/example.domain.org/.venv
+/var/www/example.domain.org/.venv/bin/python -m pip install Flask
 ```
 
 ```py
-# /var/www/.builds/example.domain.org/1/wsgi/app.py
+# /var/www/example.domain.org/wsgi/app.py
 
 from flask import Flask
 
 app = Flask(__name__)
 ...
-```
-
-```sh
-ln -sf /var/www/.builds/example.domain.org/1 /var/www/example.domain.org
 ```
 
 ## API
@@ -84,3 +82,4 @@ ln -sf /var/www/.builds/example.domain.org/1 /var/www/example.domain.org
   - Methods
     - `get_server_path(host_name: str) -> pathlib.Path` - Override to change the vhost naming scheme.
     - `get_venv_paths(path: pathlib.Path) -> list[pathlib.Path]` - Override to change the venv site packages locations.
+    - `get_version(server: Server) -> Any` - Override to customize the change detection strategy.

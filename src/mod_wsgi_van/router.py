@@ -1,10 +1,12 @@
 import atexit
 import dataclasses
+import os
 import pathlib
 import threading
 import time
+import typing
 
-from .server import Server, Environ, StartResponse
+from .server import Server, Environ, StartResponse, Response
 
 
 @dataclasses.dataclass
@@ -18,30 +20,41 @@ class Router:
 
     def __post_init__(self) -> None:
         self.servers: dict[str, Server] = {}
-        self.stop = threading.Event()
-        watcher = threading.Thread(target=self.poll_server_paths, daemon=True)
-        watcher.start()
-        atexit.register(self.stop.set)
-        atexit.register(watcher.join)
+        self.stop_watcher = threading.Event()
+        self.watcher = threading.Thread(
+            target=self.poll_server_paths,
+            daemon=True,
+        )
+        self.watcher.start()
+        atexit.register(self.shutdown)
+
+    def shutdown(self):
+        self.stop_watcher.set()
+        self.watcher.join()
+
+    def get_version(self, server: Server) -> typing.Any:
+        # Monitor the vhost WSGI directory
+        path = server.path / server.wsgi_dir
+
+        # Follow symlink changes
+        path = path.resolve(strict=True)
+
+        # Touch to reload like mod_wsgi
+        return os.stat(path).st_mtime
 
     def poll_server_paths(self):
         # Update servers when their path changes
-        while not self.stop.wait(self.update_interval):
+        while not self.stop_watcher.wait(self.update_interval):
             for server in list(self.servers.values()):
                 try:
                     # Reload modules after a build
-                    server.update()
+                    server.update(self.get_version(server))
 
-                except FileNotFoundError:
+                except Exception as e:
                     # Purge deleted servers
-                    server.log(f"Closing {server.host_name}")
+                    server.log(e)
+                    server.log("Closing")
                     del self.servers[server.host_name]
-
-                except Exception:
-                    # Purge broken servers
-                    server.log(f"Closing {server.host_name}")
-                    del self.servers[server.host_name]
-                    raise
 
     def get_server_path(self, host_name: str) -> pathlib.Path:
         return pathlib.Path(self.base_path, host_name)
@@ -66,11 +79,12 @@ class Router:
                 object_name=self.object_name,
             )
             server.load()
+            server.version = self.get_version(server)
             self.servers[host_name] = server
 
         return self.servers[host_name]
 
-    def application(self, environ: Environ, start_response: StartResponse):
+    def application(self, environ: Environ, start_response: StartResponse) -> Response:
         start_time = time.perf_counter()
         server = self.get_server(environ)
         with server.time("serve", start_time):

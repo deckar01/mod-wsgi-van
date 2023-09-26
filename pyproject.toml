@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mod-wsgi-van"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Jared Deckard", email="jared@shademaps.com" },
 ]
 description = "Dynamically route mod_wsgi to mod_vhost_alias"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
