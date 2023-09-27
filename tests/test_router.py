@@ -1,5 +1,6 @@
 import sys
 import threading
+from typing import Generator
 
 import pytest
 import pytest_mock
@@ -7,8 +8,8 @@ import pytest_mock
 from mod_wsgi_van import Router, Environ
 
 
-def noop():
-    pass
+def flush(gen: Generator):
+    return "".join(gen)
 
 
 @pytest.fixture
@@ -46,25 +47,25 @@ def hot_router():
 
 
 def test_isolation(router: Router, aries: Environ):
-    assert next(router.application(aries, noop)) == "aries test"
+    assert flush(router.application(aries, None)) == "aries test"
     assert "dep" not in sys.modules
 
 
 def test_runtime_isolation(router: Router, taurus: Environ):
-    assert next(router.application(taurus, noop)) == "taurus delta"
+    assert flush(router.application(taurus, None)) == "taurus delta"
     assert "dep" not in sys.modules
 
 
 def test_venv_isolation(router: Router, virgo: Environ):
-    assert next(router.application(virgo, noop)) == "virgo true"
+    assert flush(router.application(virgo, None)) == "virgo true"
     assert "dep" not in sys.modules
 
 
 def test_vhost_isolation(router: Router, aries: Environ, taurus: Environ):
-    assert next(router.application(aries, noop)) == "aries test"
-    assert next(router.application(taurus, noop)) == "taurus delta"
-    assert next(router.application(aries, noop)) == "aries test"
-    assert next(router.application(taurus, noop)) == "taurus delta"
+    assert flush(router.application(aries, None)) == "aries test"
+    assert flush(router.application(taurus, None)) == "taurus delta"
+    assert flush(router.application(aries, None)) == "aries test"
+    assert flush(router.application(taurus, None)) == "taurus delta"
 
 
 def test_reload(hot_router: Router, aries: Environ, mocker: pytest_mock.MockerFixture):
@@ -90,8 +91,11 @@ def test_delete(hot_router: Router, aries: Environ, mocker: pytest_mock.MockerFi
     assert "aries" in hot_router.servers
 
     mock_version.side_effect = Exception("Deleted")
-    hot_router.stop_watcher.wait(0.001)
+    looped = threading.Event()
+    loop_spy = mocker.spy(hot_router.stop_watcher, "wait")
+    loop_spy.side_effect = lambda _: looped.set()
 
+    assert looped.wait(1)
     assert "aries" not in hot_router.servers
 
 
@@ -103,6 +107,9 @@ def test_break(hot_router: Router, aries: Environ, mocker: pytest_mock.MockerFix
     assert "aries" in hot_router.servers
 
     mock_version.side_effect = Exception("Broken")
-    hot_router.stop_watcher.wait(0.001)
+    looped = threading.Event()
+    loop_spy = mocker.spy(hot_router.stop_watcher, "wait")
+    loop_spy.side_effect = lambda _: looped.set()
 
+    assert looped.wait(1)
     assert "aries" not in hot_router.servers

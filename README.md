@@ -1,5 +1,7 @@
 # mod-wsgi-van 🚐
 
+[![mod-wsgi-van](https://github.com/deckar01/mod-wsgi-van/actions/workflows/main.yml/badge.svg)](https://github.com/deckar01/mod-wsgi-van/actions/workflows/main.yml) [![Coverage Status](https://coveralls.io/repos/github/deckar01/mod-wsgi-van/badge.svg?branch=)](https://coveralls.io/github/deckar01/mod-wsgi-van?branch=)
+
 Dynamically route [mod_wsgi][0] to [mod_vhost_alias][1].
 
 [0]: https://modwsgi.readthedocs.io/en/latest/
