@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mod-wsgi-van"
-version = "0.0.3"
+version = "1.0.0"
 authors = [
   { name="Jared Deckard", email="jared@shademaps.com" },
 ]
@@ -20,3 +20,6 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/deckar01/mod-wsgi-van"
 "Bug Tracker" = "https://github.com/deckar01/mod-wsgi-van/issues"
+
+[tool.mypy]
+exclude = ['tests/fixtures/*/']

@@ -23,9 +23,9 @@ class Server:
     wsgi_dir: str
     module_name: str
     object_name: str
+    version: typing.Any
 
     import_cache: dict[str, types.ModuleType] = dataclasses.field(default_factory=dict)
-    version: typing.Any = None
 
     def load(self) -> None:
         # Load one module at a time since sys is global

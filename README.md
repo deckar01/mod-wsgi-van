@@ -84,4 +84,4 @@ app = Flask(__name__)
   - Methods
     - `get_server_path(host_name: str) -> pathlib.Path` - Override to change the vhost naming scheme.
     - `get_venv_paths(path: pathlib.Path) -> list[pathlib.Path]` - Override to change the venv site packages locations.
-    - `get_version(server: Server) -> Any` - Override to customize the change detection strategy.
+    - `get_version(path: pathlib.Path) -> Any` - Override to customize the change detection strategy.

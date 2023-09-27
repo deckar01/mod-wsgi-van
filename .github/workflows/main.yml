@@ -28,7 +28,7 @@ jobs:
         python -m pip install -e .
     - name: Typecheck with mypy
       run: |
-        python -m mypy src
+        python -m mypy src tests
     - name: Lint with black
       run: |
         python -m black --check .

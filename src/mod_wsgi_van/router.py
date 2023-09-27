@@ -32,23 +32,23 @@ class Router:
         self.stop_watcher.set()
         self.watcher.join()
 
-    def get_version(self, server: Server) -> typing.Any:
-        # Monitor the vhost WSGI directory
-        path = server.path / server.wsgi_dir
+    def get_version(self, path: pathlib.Path) -> typing.Any:
+        # Monitor the vhost's WSGI directory
+        wsgi_path = path / self.wsgi_dir
 
         # Follow symlink changes
-        path = path.resolve(strict=True)
+        hard_path = wsgi_path.resolve(strict=True)
 
-        # Touch to reload like mod_wsgi
-        return os.stat(path).st_mtime
+        # Allow touching to reload like mod_wsgi
+        return os.stat(hard_path).st_mtime
 
     def poll_server_paths(self):
         # Update servers when their path changes
         while not self.stop_watcher.wait(self.update_interval):
             for server in list(self.servers.values()):
                 try:
-                    # Reload modules after a build
-                    server.update(self.get_version(server))
+                    # Reload modules after a deploy
+                    server.update(self.get_version(server.path))
 
                 except Exception as e:
                     # Purge deleted servers
@@ -77,9 +77,9 @@ class Router:
                 wsgi_dir=self.wsgi_dir,
                 module_name=self.module_name,
                 object_name=self.object_name,
+                version=self.get_version(path),
             )
             server.load()
-            server.version = self.get_version(server)
             self.servers[host_name] = server
 
         return self.servers[host_name]
